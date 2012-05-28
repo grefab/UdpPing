@@ -35,13 +35,8 @@ def start_service_announcer(&code)
 end
 
 
-def reply_for_client
-  {:port => @queen_http_port}
-end
-
-
 thread = start_service_announcer do |data, client_ip|
-  reply_for_client
+  {:port => @queen_http_port}
 end
 
 thread.join
