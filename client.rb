@@ -3,8 +3,7 @@ require 'socket'
 require 'pp'
 
 
-@server_udp_port = 1234
-@drone_udp_port = 4567
+@drone_udp_port = 12345
 
 def broadcast_msg(content, udp_port)
   body = {:reply_port => @drone_udp_port, :content => content}
@@ -28,21 +27,22 @@ def start_server_listener(&code)
   end
 end
 
-def query_server content
-  broadcast_msg(content, @server_udp_port)
+def query_server(content, server_udp_port, &code)
+  thread = start_server_listener do |data, server_ip|
+    code.call(data, server_ip)
+  end
+  
+  broadcast_msg(content, server_udp_port) 
+  
+  thread.join
 end
 
 
-def handle_server_answer(data, server_ip)
+query_server "xxx", 1234 do |data, server_ip|
   puts "Queen: #{server_ip}:#{data[:port]}"
 end
 
-thread = start_server_listener do |data, server_ip|
-  handle_server_answer(data, server_ip)
-end
 
-query_server "xxx"
 
-thread.join
 
 
