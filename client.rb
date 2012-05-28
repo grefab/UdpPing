@@ -1,46 +1,48 @@
 require 'rubygems'
 require 'socket'
-require 'json'
 require 'pp'
 
 
-@queen_udp_port = 1234
+@server_udp_port = 1234
 @drone_udp_port = 4567
 
-def broadcast_msg(message, udp_port)
+def broadcast_msg(content, udp_port)
+  body = {:reply_port => @drone_udp_port, :content => content}
+
   s = UDPSocket.new
   s.setsockopt(Socket::SOL_SOCKET, Socket::SO_BROADCAST, true)
-  s.send(message, 0, '<broadcast>', udp_port)
+  s.send(Marshal.dump(body), 0, '<broadcast>', udp_port)
+  s.close
 end
 
-def handle_queen_answer(body, sender)
-  data = Marshal.load body
-
-  queen_ip = sender[3]
-  queen_port = data[:port]
-
-  puts "Queen: #{queen_ip}:#{queen_port}"
-end
-
-def start_queen_listener
+def start_server_listener(&code)
   Thread.fork do
     s = UDPSocket.new
     s.bind('0.0.0.0', @drone_udp_port)
 
-    loop do
-      body, sender = s.recvfrom(1024)
-      handle_queen_answer(body, sender)
-    end
+    body, sender = s.recvfrom(1024)
+
+    server_ip = sender[3]
+    data = Marshal.load(body)
+    code.call(data, server_ip)
   end
 end
 
-def query_queen
-  message = {:type => "drone", :port => @drone_udp_port}
-  broadcast_msg(Marshal.dump(message), @queen_udp_port)
+def query_server content
+  broadcast_msg(content, @server_udp_port)
 end
 
-start_queen_listener
-sleep 1
-query_queen
-sleep 1
+
+def handle_server_answer(data, server_ip)
+  puts "Queen: #{server_ip}:#{data[:port]}"
+end
+
+thread = start_server_listener do |data, server_ip|
+  handle_server_answer(data, server_ip)
+end
+
+query_server "xxx"
+
+thread.join
+
 
