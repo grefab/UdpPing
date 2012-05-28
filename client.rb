@@ -15,9 +15,14 @@ end
 post '/queen' do
   data = JSON.parse request.body.read
 
-  puts "Queen told me:"
   PP.pp data
 
+  ip = request.ip
+  port = data["port"]
+
+  puts "Queen told me to be at http://#{ip}:#{port}/"
+
+  # Send something nice back
   {:status => "received"}.to_json
 end
 

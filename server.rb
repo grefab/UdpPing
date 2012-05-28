@@ -6,12 +6,12 @@ require 'rest-client'
 
 
 udp_port = 1234
-
+@http_port = 4567
 
 def inform_drone(ip, port)
   url = "http://#{ip}:#{port}/queen"
   PP.pp url
-  RestClient.post url, {:message => "hello"}.to_json
+  RestClient.post url, {:port => @http_port}.to_json
 end
 
 Thread.fork do
@@ -21,19 +21,15 @@ Thread.fork do
   loop do
     text, sender = s.recvfrom(1024)
     data = Marshal.load(text)
-    PP.pp data
-    PP.pp sender
 
     ip = sender[3]
-    PP.pp ip
-
     port = data[:port]
-    PP.pp port
 
-    sleep 3
     begin
+      sleep 1
       inform_drone ip, port
     rescue
+      # Make sure thread does not crash
     end
   end
 end
