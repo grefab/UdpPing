@@ -1,6 +1,5 @@
-require 'rubygems'
 require 'socket'
-require 'pp'
+require 'timeout'
 
 
 @drone_udp_port = 12345
@@ -19,8 +18,7 @@ def start_server_listener(&code)
     s = UDPSocket.new
     s.bind('0.0.0.0', @drone_udp_port)
 
-    body, sender = s.recvfrom(1024)
-
+    body, sender = timeout(3) { s.recvfrom(1024) }
     server_ip = sender[3]
     data = Marshal.load(body)
     code.call(data, server_ip)
@@ -34,15 +32,20 @@ def query_server(content, server_udp_port, &code)
   
   broadcast_msg(content, server_udp_port) 
   
-  thread.join
+  begin
+    thread.join
+  rescue Timeout::Error
+    return false
+  end
+
+  true
 end
 
 
-query_server "xxx", 1234 do |data, server_ip|
+result = query_server("xxx", 1234) do |data, server_ip|
   puts "Queen: #{server_ip}:#{data[:port]}"
 end
 
-
-
+puts result
 
 
