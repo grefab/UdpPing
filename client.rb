@@ -1,9 +1,11 @@
 require 'rubygems'
 require 'socket'
-require 'sinatra'
 require 'json'
 require 'pp'
 
+
+@queen_udp_port = 1234
+@drone_udp_port = 4567
 
 def broadcast_msg(message, udp_port)
   s = UDPSocket.new
@@ -11,24 +13,34 @@ def broadcast_msg(message, udp_port)
   s.send(message, 0, '<broadcast>', udp_port)
 end
 
+def handle_queen_answer(body, sender)
+  data = Marshal.load body
 
-post '/queen' do
-  data = JSON.parse request.body.read
+  queen_ip = sender[3]
+  queen_port = data[:port]
 
-  PP.pp data
-
-  ip = request.ip
-  port = data["port"]
-
-  puts "Queen told me to be at http://#{ip}:#{port}/"
-
-  # Send something nice back
-  {:status => "received"}.to_json
+  puts "Queen: #{queen_ip}:#{queen_port}"
 end
 
+def start_queen_listener
+  Thread.fork do
+    s = UDPSocket.new
+    s.bind('0.0.0.0', @drone_udp_port)
+
+    loop do
+      body, sender = s.recvfrom(1024)
+      handle_queen_answer(body, sender)
+    end
+  end
+end
+
+def query_queen
+  message = {:type => "drone", :port => @drone_udp_port}
+  broadcast_msg(Marshal.dump(message), @queen_udp_port)
+end
+
+start_queen_listener
 sleep 1
-udp_port = 1234
-http_port = 4567
-message = {:type => "drone", :port => http_port}
-broadcast_msg Marshal.dump(message), udp_port
+query_queen
+sleep 1
 

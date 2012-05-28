@@ -1,37 +1,44 @@
 require 'rubygems'
-require 'json'
 require 'socket'
 require 'pp'
-require 'rest-client'
 
 
-udp_port = 1234
-@http_port = 4567
+@queen_udp_port = 1234
+@queen_http_port = 4567
 
-def inform_drone(ip, port)
-  url = "http://#{ip}:#{port}/queen"
-  PP.pp url
-  RestClient.post url, {:port => @http_port}.to_json
+def inform_drone(ip, port, content)
+  s = UDPSocket.new
+  s.send(Marshal.dump(content), 0, ip, port)
+  s.close
 end
 
-Thread.fork do
-  s = UDPSocket.new
-  s.bind('0.0.0.0', udp_port)
+def handle_incoming_drone_request(body, sender)
+  data = Marshal.load body
 
-  loop do
-    text, sender = s.recvfrom(1024)
-    data = Marshal.load(text)
+  drone_ip = sender[3]
+  drone_port = data[:port]
+  content = {:port => @queen_http_port}
 
-    ip = sender[3]
-    port = data[:port]
+  begin
+    inform_drone(drone_ip, drone_port, content)
+  rescue
+    # Make sure thread does not crash
+  end
+end
 
-    begin
-      sleep 1
-      inform_drone ip, port
-    rescue
-      # Make sure thread does not crash
+def start_service_announcer
+  Thread.fork do
+    s = UDPSocket.new
+    s.bind('0.0.0.0', @queen_udp_port)
+
+    loop do
+      body, sender = s.recvfrom(1024)
+      handle_incoming_drone_request(body, sender)
     end
   end
 end
+
+
+start_service_announcer
 
 puts gets
