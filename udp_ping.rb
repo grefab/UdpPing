@@ -23,10 +23,12 @@ module UDPPing
         client_port = data[:reply_port]
         response = code.call(data[:content], client_ip)
 
-        begin
-          answer_client(client_ip, client_port, response)
-        rescue
-          # Make sure thread does not crash
+        if response
+          begin
+            answer_client(client_ip, client_port, response)
+          rescue
+            # Make sure thread does not crash
+          end
         end
       end
     end
