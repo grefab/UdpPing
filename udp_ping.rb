@@ -46,10 +46,15 @@ module UDPPing
       s = UDPSocket.new
       s.bind('0.0.0.0', @drone_udp_port)
 
-      body, sender = timeout(3) { s.recvfrom(1024) }
-      server_ip = sender[3]
-      data = Marshal.load(body)
-      code.call(data, server_ip)
+      begin
+        body, sender = timeout(3) { s.recvfrom(1024); }
+        server_ip = sender[3]
+        data = Marshal.load(body)
+        code.call(data, server_ip)
+        s.close
+      rescue Timeout::Error
+        s.close
+      end
     end
   end
 
