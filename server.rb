@@ -1,43 +1,14 @@
-require 'rubygems'
-require 'socket'
-require 'pp'
+require_relative 'udp_ping'
 
+SERVER_LISTEN_PORT = 1234
 
-@queen_udp_port = 1234
-@queen_http_port = 4567
+puts "Starting Server..."
 
-def answer_client(ip, port, response)
-  s = UDPSocket.new
-  s.send(Marshal.dump(response), 0, ip, port)
-  s.close
+thread = UDPPing.start_service_announcer(SERVER_LISTEN_PORT) do |client_msg, client_ip|
+  {you_are: client_ip, you_said: client_msg, i_say: "foobar!"}
 end
 
-def start_service_announcer(&code)
-  Thread.fork do
-    s = UDPSocket.new
-    s.bind('0.0.0.0', @queen_udp_port)
-
-    loop do
-      body, sender = s.recvfrom(1024)
-      data = Marshal.load body
-
-      client_ip = sender[3]
-      client_port = data[:reply_port]
-      response = code.call(data[:content], sender)
-
-      begin
-        answer_client(client_ip, client_port, response)
-      rescue
-        # Make sure thread does not crash
-      end
-    end
-  end
-end
-
-
-thread = start_service_announcer do |data, client_ip|
-  {:port => @queen_http_port}
-end
+puts "Server running."
 
 thread.join
 
