@@ -1,9 +1,13 @@
-require_relative 'udp_ping'
+require_relative "udp_ping"
+require "prettyprint"
 
-result = UDPPing.query_server("xxx", 1234) do |data, server_ip|
-  puts "Queen: #{server_ip}:#{data[:queen_http_port]}"
+SERVER_LISTEN_PORT = 1234
+
+puts "Querying server..."
+
+result = UDPPing.query_server("Hello", SERVER_LISTEN_PORT) do |data, server_ip|
+  puts "Server answered:"
+  p(server_ip: server_ip, server_answer: data)
 end
 
-puts result
-
-
+puts "Query finished. Result: #{result}."

@@ -1,5 +1,5 @@
-require 'socket'
-require 'timeout'
+require "socket"
+require "timeout"
 
 module UDPPing
   @drone_udp_port = 12345
@@ -21,7 +21,7 @@ module UDPPing
 
         client_ip = sender[3]
         client_port = data[:reply_port]
-        response = code.call(data[:content], sender)
+        response = code.call(data[:content], client_ip)
 
         begin
           answer_client(client_ip, client_port, response)
@@ -41,25 +41,26 @@ module UDPPing
     s.close
   end
 
-  def self.start_server_listener(&code)
+  def self.start_server_listener(time_out=3, &code)
     Thread.fork do
       s = UDPSocket.new
       s.bind('0.0.0.0', @drone_udp_port)
 
       begin
-        body, sender = timeout(3) { s.recvfrom(1024); }
+        body, sender = timeout(time_out) { s.recvfrom(1024) }
         server_ip = sender[3]
         data = Marshal.load(body)
         code.call(data, server_ip)
         s.close
       rescue Timeout::Error
         s.close
+        raise
       end
     end
   end
 
-  def self.query_server(content, server_udp_port, &code)
-    thread = start_server_listener do |data, server_ip|
+  def self.query_server(content, server_udp_port, time_out=3, &code)
+    thread = start_server_listener(time_out) do |data, server_ip|
       code.call(data, server_ip)
     end
 

@@ -1,8 +1,14 @@
 require_relative 'udp_ping'
 
-thread = UDPPing.start_service_announcer(1234) do |data, client_ip|
-  {:queen_http_port => 4567}
+SERVER_LISTEN_PORT = 1234
+
+puts "Starting Server..."
+
+thread = UDPPing.start_service_announcer(SERVER_LISTEN_PORT) do |client_msg, client_ip|
+  {you_are: client_ip, you_said: client_msg, i_say: "foobar!"}
 end
+
+puts "Server running."
 
 thread.join
 
